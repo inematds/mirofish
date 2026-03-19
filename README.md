@@ -1,4 +1,8 @@
+![MiroFish Hero](static/image/mirofish_hero.png)
+
 # MiroFish
+
+> **[Leia em Português](#mirofish-português)**
 
 A swarm intelligence prediction engine. Upload documents describing any scenario, and MiroFish simulates thousands of AI agents reacting on social media to predict how events will unfold.
 
@@ -119,6 +123,135 @@ Document upload → LLM ontology extraction → Knowledge graph (KuzuDB)
 ## License
 
 AGPL-3.0
-License
+
+---
+
+![MiroFish Dashboard](static/image/mirofish_dashboard.png)
+
+---
+
+# MiroFish (Português)
+
+Um motor de previsão baseado em inteligência de enxame. Envie documentos descrevendo qualquer cenário e o MiroFish simula milhares de agentes de IA reagindo em redes sociais para prever como os eventos vão se desenrolar.
+
+**Demo:** [synth.scty.org](https://synth.scty.org)
+
+> Fork de [666ghj/MiroFish](https://github.com/666ghj/MiroFish) — totalmente traduzido para inglês, armazenamento local em grafo com KuzuDB, suporte a Claude/Codex CLI adicionado.
+
+## O que faz
+
+1. **Envie sementes de realidade** — PDFs, markdown ou arquivos de texto (notícias, propostas de políticas, relatórios financeiros, qualquer coisa)
+2. **Descreva o que prever** — prompt em linguagem natural (ex.: "Preveja a reação pública a esta política em 60 dias")
+3. **MiroFish constrói um mundo** — extrai entidades e relacionamentos em um grafo de conhecimento, gera personas de agentes de IA com personalidades e opiniões distintas
+4. **Agentes simulam redes sociais** — simulação em duas plataformas (Twitter + Reddit) onde agentes postam, respondem, curtem, debatem e seguem uns aos outros
+5. **Obtenha um relatório de previsão** — a IA analisa todos os dados da simulação e produz conclusões. Converse com o agente de relatórios ou entreviste agentes simulados individualmente.
+
+## Mudanças em relação ao upstream
+
+| Área | Upstream | Este fork |
+|------|----------|-----------|
+| **Idioma** | Interface e prompts em chinês | Totalmente em inglês (60+ arquivos traduzidos) |
+| **Provedores LLM** | Apenas Alibaba Qwen | OpenAI, Anthropic, Claude CLI, Codex CLI |
+| **Banco de grafos** | Serviço de grafo hospedado | KuzuDB local (embutido, gratuito) |
+| **Extração de entidades** | Pipeline de extração gerenciada | Extração via LLM (usa seu próprio modelo) |
+| **Autenticação** | Requer chaves de API | Pode usar assinaturas do Claude Code ou Codex CLI (sem custo de API separado) |
+
+## Início rápido
+
+### Pré-requisitos
+
+- Node.js 18+
+- Python 3.11-3.12
+- [uv](https://docs.astral.sh/uv/) (gerenciador de pacotes Python)
+
+### Configuração
+
+```bash
+cp .env.example .env
+# Edite .env — escolha seu provedor LLM (veja abaixo)
+npm run setup:all
+npm run dev
+```
+
+- Frontend: http://localhost:3000
+- API Backend: http://localhost:5001
+
+### Docker
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+O Docker compila o frontend Vue, serve-o a partir do app Flask e expõe o app combinado na porta `5001` dentro do container.
+
+## Provedores LLM
+
+Defina `LLM_PROVIDER` no `.env`:
+
+| Provedor | Configuração | Custo |
+|----------|--------------|-------|
+| `claude-cli` | Apenas defina `LLM_PROVIDER=claude-cli` | Usa sua assinatura do Claude Code |
+| `codex-cli` | Apenas defina `LLM_PROVIDER=codex-cli` | Usa sua assinatura do Codex CLI |
+| `openai` | Defina `LLM_API_KEY` + `LLM_MODEL_NAME` | Pagamento por token |
+| `anthropic` | Defina `LLM_API_KEY` + `LLM_MODEL_NAME` | Pagamento por token |
+
+```env
+# Exemplo: usar Codex CLI (sem chave de API)
+LLM_PROVIDER=codex-cli
+
+# Exemplo: usar API da OpenAI
+LLM_PROVIDER=openai
+LLM_API_KEY=sk-...
+LLM_MODEL_NAME=gpt-4o-mini
+```
+
+## Arquitetura
+
+```
+frontend/          Vue 3 + Vite + D3.js (visualização de grafos)
+backend/
+  app/
+    api/           Endpoints REST Flask enxutos (grafo, simulação, relatório)
+    core/          Sessão workbench, registro de sessões, carregador de recursos, tarefas
+    resources/     Adaptadores para projetos, documentos, Kuzu, simulações, relatórios
+    tools/         Operações combináveis do workbench (ingestão, construção, preparação, execução, relatório)
+    services/
+      graph_db.py          Grafo de conhecimento com KuzuDB
+      entity_extractor.py  Extração de entidades/relacionamentos via LLM
+      graph_builder.py     Pipeline ontologia → grafo
+      simulation_runner.py Simulação multi-agente OASIS (subprocesso)
+      report_agent.py      Agente ReACT com chamada de ferramentas para relatórios
+      kuzu_tools.py        Ferramentas de busca, entrevista e análise
+    utils/
+      llm_client.py        Cliente LLM multi-provedor (OpenAI/Anthropic/CLI)
+  scripts/         Scripts do simulador OASIS (Twitter + Reddit)
+```
+
+Os metadados da sessão workbench são persistidos em `backend/uploads/workbench_sessions/`, e o estado de tarefas de longa duração é persistido em `backend/uploads/tasks/`.
+
+O backend está sendo refatorado em formato pi: um núcleo de sessão workbench, adaptadores de recursos plugáveis, ferramentas combináveis e camadas de API enxutas.
+
+## Como o pipeline funciona
+
+```
+Upload de documento → Extração de ontologia via LLM → Grafo de conhecimento (KuzuDB)
+    → Filtragem de entidades → Geração de personas de agentes (LLM)
+    → Simulação OASIS em duas plataformas (Twitter + Reddit, subprocesso)
+    → Atualizações de memória do grafo → Geração de relatório (agente ReACT)
+    → Chat interativo com o agente de relatórios ou agentes individuais
+```
+
+## Agradecimentos
+
+- [MiroFish](https://github.com/666ghj/MiroFish) por 666ghj — projeto original
+- [OASIS](https://github.com/camel-ai/oasis) por CAMEL-AI — framework de simulação social multi-agente
+- [KuzuDB](https://github.com/kuzudb/kuzu) — banco de dados de grafos embutido
+
+## Licença
 
 AGPL-3.0
+
+---
+
+![MiroFish Architecture](static/image/mirofish_architecture.png)
